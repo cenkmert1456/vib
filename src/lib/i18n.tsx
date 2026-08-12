@@ -70,7 +70,7 @@ function matchLang(tag: string): Lang | null {
 }
 
 const en = {
-  // App
+  // App name and tagline
   "app.name": "VYBE",
   "app.tagline": "Feel the vibe. Find your people.",
   "nav.discover": "Discover",
