@@ -1,3 +1,5 @@
+// VYBE database schema. The src/convex/_generated/ directory is regenerated
+// from this file by `convex dev --once` (Convex codegen) and is gitignored.
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { Infer, v } from "convex/values";

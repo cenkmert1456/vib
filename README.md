@@ -210,14 +210,21 @@ step is intentionally not simulated in the app.
 ## GitHub Actions
 
 - **`.github/workflows/android-build.yml`** — on push/PR: installs
-  dependencies, typechecks, lints, builds the web app, syncs Capacitor,
-  compiles the debug APK with the Android SDK, and uploads `app-debug.apk` as a
-  build artifact. Fails the run if the APK cannot be built.
-- **`.github/workflows/ios-check.yml`** — on push/PR (macOS runner): typechecks,
-  builds the web app, syncs Capacitor, and compiles an **unsigned simulator
-  build** with `xcodebuild` to validate the Xcode project. Real signed iOS
-  builds require Apple certificates and run from a local Mac or a paid Apple
-  runner.
+  dependencies, regenerates Convex types (best-effort), typechecks, lints,
+  builds the web app, syncs Capacitor, compiles the debug APK with the Android
+  SDK, and uploads `app-debug.apk` as a build artifact. Fails the run if the
+  APK cannot be built.
+- **`.github/workflows/ios-check.yml`** — on push/PR (macOS runner):
+  regenerates Convex types (best-effort), typechecks, builds the web app,
+  syncs Capacitor, and compiles an **unsigned simulator build** with
+  `xcodebuild` to validate the Xcode project. Real signed iOS builds require
+  Apple certificates and run from a local Mac or a paid Apple runner.
+
+> **Convex codegen note:** `src/convex/_generated/` is committed to the repo
+> (Convex's recommended setup — your code won't typecheck without it) and is
+> regenerated automatically by `bun convex dev --once` whenever Convex source
+> files change. CI regenerates it best-effort and falls back to the committed
+> types so typechecking never depends on Convex credentials.
 
 ## Release Signing
 
@@ -236,8 +243,9 @@ step is intentionally not simulated in the app.
    keyAlias=vybe
    keyPassword=***
    ```
-3. Add the signing config to `android/app/build.gradle` and build
-   `assembleRelease` / `bundleRelease`.
+3. The signing config is already wired into `android/app/build.gradle` — it
+   reads `keystore.properties` when present and falls back to an unsigned
+   release build otherwise. Then build `assembleRelease` / `bundleRelease`.
 4. In GitHub Actions, add the keystore as a base64 secret and the passwords as
    secrets, then sign the release artifacts before upload.
 
