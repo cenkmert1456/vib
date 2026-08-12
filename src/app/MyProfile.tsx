@@ -292,7 +292,7 @@ function BoostCard() {
   const boost = useQuery(api.boosts.boostStatus);
   const activate = useMutation(api.boosts.activateBoost);
   const sweep = useMutation(api.boosts.sweepExpiredBoost);
-  const now = useNow(15000);
+  useNow(15000);
   const sweptRef = useRef(false);
   const [pending, setPending] = useState(false);
 

@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate, useParams } from "react-router";

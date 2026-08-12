@@ -1,4 +1,3 @@
-import { v } from "convex/values";
 import { mutation, query, MutationCtx } from "./_generated/server";
 import { getMyProfile, nowMs } from "./helpers";
 import { entitlementsForUser } from "./entitlements";
@@ -90,7 +89,7 @@ export const activateBoost = mutation({
       await ctx.db.patch(active._id, {
         status: "completed",
         endedAt: now,
-        result: await computeResult(ctx, active._id, active.baseViews),
+        result: await computeResult(ctx, active._id),
       });
     }
 
@@ -148,7 +147,7 @@ export const sweepExpiredBoost = mutation({
       .first();
     if (!active || active.status !== "active" || active.expiresAt > now)
       return null;
-    const result = await computeResult(ctx, active._id, active.baseViews);
+    const result = await computeResult(ctx, active._id);
     await ctx.db.patch(active._id, {
       status: "completed",
       endedAt: now,
@@ -168,7 +167,6 @@ export const sweepExpiredBoost = mutation({
 async function computeResult(
   ctx: MutationCtx,
   boostId: import("./_generated/dataModel").Id<"boosts">,
-  baseViews: number,
 ) {
   const boost = await ctx.db.get(boostId);
   if (!boost) return { views: 0, likes: 0, matches: 0 };

@@ -329,7 +329,7 @@ function LogoutButton() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [, setPending] = useState(false);
 
   const handle = async () => {
     setPending(true);
@@ -370,7 +370,7 @@ function DeleteButton() {
   const { signOut } = useAuth();
   const deleteAccount = useMutation(api.profiles.deleteAccount);
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [, setPending] = useState(false);
 
   const handle = async () => {
     setPending(true);
@@ -879,7 +879,6 @@ function SupportView({ onOpen }: { onOpen: (v: View) => void }) {
 }
 
 function HelpView() {
-  const { t } = useI18n();
   const faqs = [
     { q: "How does matching work?", a: "When you like someone and they like you back, it's a match. You'll see their conversation appear in Messages." },
     { q: "Is my location shared?", a: "Never exactly. Other people only see an approximate distance in km." },

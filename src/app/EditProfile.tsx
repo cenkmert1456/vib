@@ -26,7 +26,6 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
 
 type Prompt = { question: string; answer: string };
 

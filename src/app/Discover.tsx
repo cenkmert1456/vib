@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Heart,
   Info,
-  Loader2,
   RefreshCw,
   Sparkles,
   X,

@@ -5,7 +5,6 @@ import { useNavigate } from "react-router";
 import { useI18n, type TKey } from "@/lib/i18n";
 import { ScreenHeader } from "@/components/mobile/ui";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   BadgeCheck,
@@ -43,8 +42,8 @@ export default function Verify() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [challenges, setChallenges] = useState<string[]>([]);
   const [providerConfigured, setProviderConfigured] = useState(false);
-  const [results, setResults] = useState<string[]>([]);
-  const [capturedAt, setCapturedAt] = useState<number[]>([]);
+  const [, setResults] = useState<string[]>([]);
+  const [, setCapturedAt] = useState<number[]>([]);
   const startedRef = useRef(false);
 
   // Entry state derived from the live verification status query.
@@ -326,7 +325,7 @@ function CameraFlow({
           await videoRef.current.play().catch(() => undefined);
         }
         setReady(true);
-      } catch (err) {
+      } catch {
         setPermissionDenied(true);
       }
     }

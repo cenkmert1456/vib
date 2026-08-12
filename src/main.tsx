@@ -8,10 +8,22 @@ import { ConvexReactClient } from "convex/react";
 import { ThemeProvider } from "next-themes";
 import React, { StrictMode, lazy, Suspense, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { I18nProvider } from "@/lib/i18n";
 import { LogoMark } from "@/components/Logo";
+import { initMobilePlatform, onNativeNavigate } from "@/lib/mobile";
 import "./index.css";
+
+// Native-only setup (status bar, splash, deep links, push notifications).
+// No-ops when running as a plain web app.
+initMobilePlatform();
 
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
@@ -101,6 +113,7 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 function RouteSyncer() {
   const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     window.parent.postMessage(
       { type: "iframe-route-change", path: location.pathname },
@@ -118,6 +131,9 @@ function RouteSyncer() {
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, []);
+
+  // Deep links + push notification taps on native platforms.
+  useEffect(() => onNativeNavigate((path) => navigate(path)), [navigate]);
 
   return null;
 }

@@ -33,7 +33,7 @@ function formatPrice(usd: number) {
 }
 
 export default function Premium() {
-  const { t, lang, formatFullDate } = useI18n();
+  const { t, formatFullDate } = useI18n();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
 

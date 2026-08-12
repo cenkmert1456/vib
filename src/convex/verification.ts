@@ -2,7 +2,6 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { currentUserId, getMyProfile, nowMs } from "./helpers";
 import { verificationProvider } from "./providers/verification";
-import { api } from "./_generated/api";
 
 /**
  * Randomized liveness challenge library. The order is shuffled per session on

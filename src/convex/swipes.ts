@@ -64,7 +64,6 @@ export const discover = query({
     const originLat = travelActive ? (me.travel?.lat ?? me.approxLat) : me.approxLat;
     const originLng = travelActive ? (me.travel?.lng ?? me.approxLng) : me.approxLng;
     const originCountry = travelActive ? me.travel?.countryCode : me.countryCode;
-    const originCity = travelActive ? me.travel?.cityName : me.city;
 
     const myIdStr = me._id.toString();
     const prefs = me.discoveryPrefs;

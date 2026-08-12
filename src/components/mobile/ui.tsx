@@ -28,16 +28,14 @@ export function ScreenHeader({
         transparent ? "bg-transparent" : "glass border-b border-border/60",
       )}
     >
-      {(onBack || true) && (
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={onBack ?? (() => navigate(-1))}
-          className="-ml-1 flex size-10 shrink-0 items-center justify-center rounded-full text-foreground active:bg-muted"
-        >
-          <ChevronLeft className="size-6" />
-        </button>
-      )}
+      <button
+        type="button"
+        aria-label="Back"
+        onClick={onBack ?? (() => navigate(-1))}
+        className="-ml-1 flex size-10 shrink-0 items-center justify-center rounded-full text-foreground active:bg-muted"
+      >
+        <ChevronLeft className="size-6" />
+      </button>
       <div className="min-w-0 flex-1">
         <h1 className="truncate font-display text-lg font-bold leading-tight">
           {title}
