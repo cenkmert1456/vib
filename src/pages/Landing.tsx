@@ -1,52 +1,83 @@
-import { AnimatePresence, motion, type Variants } from "framer-motion";
-import {
-  ArrowRight,
-  Globe2,
-  HeartHandshake,
-  ShieldCheck,
-} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, ShieldCheck } from "lucide-react";
 import { Link } from "react-router";
 import { LogoMark } from "@/components/Logo";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 
-/** Splash: VYBE logo with a subtle animated entrance, shown once per session. */
+/* ------------------------------------------------------------------ */
+/* Splash — premium, fast, network-free. ~1.7s + soft fade.            */
+/* ------------------------------------------------------------------ */
+
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const { t } = useI18n();
   useEffect(() => {
-    const timer = window.setTimeout(onDone, 1900);
+    const timer = window.setTimeout(onDone, 1700);
     return () => window.clearTimeout(timer);
   }, [onDone]);
   return (
     <motion.div
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.45, ease: "easeInOut" }}
+      transition={{ duration: 0.35, ease: "easeInOut" }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
     >
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/20 blur-[100px]" />
+        <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/15 blur-[90px]" />
       </div>
-      <motion.div
-        initial={{ scale: 0.6, opacity: 0, y: 10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <LogoMark size={96} className="shadow-glow rounded-[1.75rem]" />
-      </motion.div>
+      <svg width="106" height="106" viewBox="0 0 64 64" fill="none" aria-hidden="true" className="overflow-visible">
+        <defs>
+          <linearGradient id="splash-v" x1="12" y1="12" x2="52" y2="54" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#8B5CF6" />
+            <stop offset="0.55" stopColor="#C026D3" />
+            <stop offset="1" stopColor="#FF5FA2" />
+          </linearGradient>
+          <linearGradient id="splash-dot" x1="27" y1="45" x2="37" y2="57" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#FF5FA2" />
+            <stop offset="1" stopColor="#38BDF8" />
+          </linearGradient>
+        </defs>
+        <motion.path
+          d="M13 14 C 25 19, 30.5 33, 32 46"
+          stroke="url(#splash-v)"
+          strokeWidth="8.5"
+          strokeLinecap="round"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 0.6, ease: "easeInOut", delay: 0.1 }}
+        />
+        <motion.path
+          d="M51 14 C 39 19, 33.5 33, 32 46"
+          stroke="url(#splash-v)"
+          strokeWidth="8.5"
+          strokeLinecap="round"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 0.6, ease: "easeInOut", delay: 0.28 }}
+        />
+        <motion.circle
+          cx="32"
+          cy="51.5"
+          r="3"
+          fill="url(#splash-dot)"
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.75, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </svg>
       <motion.h1
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative mt-7 font-display text-2xl font-bold tracking-[0.24em]"
+        transition={{ duration: 0.5, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative mt-6 font-display text-2xl font-bold tracking-[0.24em]"
       >
         VYBE
       </motion.h1>
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.65 }}
+        transition={{ duration: 0.5, delay: 0.95 }}
         className="relative mt-2 text-[13px] font-medium text-muted-foreground"
       >
         {t("landing.splashTagline")}
@@ -55,62 +86,292 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
-  }),
-};
+/* ------------------------------------------------------------------ */
+/* Abstract visuals (offline-safe — no external images)                */
+/* ------------------------------------------------------------------ */
 
-function MiniProfileCard() {
+function ConnectionVisual() {
+  const nodes = [
+    { x: 60, y: 84, r: 10 },
+    { x: 172, y: 46, r: 14 },
+    { x: 268, y: 92, r: 9 },
+    { x: 116, y: 168, r: 11 },
+    { x: 232, y: 178, r: 13 },
+    { x: 166, y: 116, r: 20 },
+  ];
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 40, rotate: 4 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="relative mx-auto w-56"
-    >
-      <div className="absolute -inset-6 rounded-[2.5rem] bg-gradient-to-b from-violet-500/25 via-fuchsia-500/15 to-transparent blur-2xl" />
-      <div className="relative aspect-[3/4.2] overflow-hidden rounded-[1.75rem] border border-white/10 shadow-2xl">
-        <img
-          src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80"
-          alt="Profile preview"
-          className="h-full w-full object-cover"
-          loading="lazy"
+    <svg viewBox="0 0 320 220" className="w-72" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="conn-grad" x1="60" y1="60" x2="260" y2="200" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8B5CF6" />
+          <stop offset="1" stopColor="#FF5FA2" />
+        </linearGradient>
+      </defs>
+      {/* connection lines */}
+      {[
+        [0, 1],
+        [1, 5],
+        [5, 2],
+        [1, 3],
+        [5, 4],
+        [0, 3],
+        [3, 4],
+      ].map(([a, b], i) => (
+        <motion.line
+          key={i}
+          x1={nodes[a].x}
+          y1={nodes[a].y}
+          x2={nodes[b].x}
+          y2={nodes[b].y}
+          stroke="url(#conn-grad)"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 0.5 }}
+          transition={{ duration: 0.7, delay: 0.15 + i * 0.08 }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="flex items-center gap-1.5">
-            <p className="font-display text-lg font-bold text-white">Maya, 26</p>
-          </div>
-          <p className="mt-0.5 text-xs text-white/75">Istanbul · 3 km away</p>
-          <div className="mt-2.5 flex gap-1.5">
-            {["📷", "☕", "✈️"].map((e) => (
-              <span
-                key={e}
-                className="rounded-full bg-white/15 px-2 py-0.5 text-xs backdrop-blur"
-              >
-                {e}
-              </span>
-            ))}
-          </div>
-        </div>
-        <motion.div
-          animate={{ rotate: [0, -8, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 3, repeatDelay: 1.5 }}
-          className="absolute right-3 top-3 flex size-11 items-center justify-center rounded-full bg-white/90 shadow-lg"
-        >
-          <HeartHandshake className="size-5 text-fuchsia-600" />
-        </motion.div>
-      </div>
-    </motion.div>
+      ))}
+      {/* nodes */}
+      {nodes.map((n, i) => (
+        <motion.circle
+          key={i}
+          cx={n.x}
+          cy={n.y}
+          r={n.r}
+          fill={i === 5 ? "url(#conn-grad)" : "#1B1B26"}
+          stroke={i === 5 ? "none" : "rgba(139,92,246,0.55)"}
+          strokeWidth="2"
+          initial={{ opacity: 0, scale: 0.4 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.3 + i * 0.07, ease: [0.22, 1, 0.36, 1] }}
+        />
+      ))}
+      {/* center pulse ring */}
+      <motion.circle
+        cx={nodes[5].x}
+        cy={nodes[5].y}
+        r={20}
+        stroke="rgba(192,38,211,0.5)"
+        strokeWidth="1.5"
+        initial={{ opacity: 0.7, scale: 1 }}
+        animate={{ opacity: 0, scale: 1.8 }}
+        transition={{ repeat: Infinity, duration: 2.4, ease: "easeOut", delay: 1 }}
+      />
+    </svg>
   );
 }
 
-export default function Landing() {
+function SafetyVisual() {
+  return (
+    <div className="relative flex h-52 w-52 items-center justify-center">
+      <motion.div
+        className="absolute inset-0 rounded-full bg-violet-600/15 blur-2xl"
+        animate={{ opacity: [0.6, 1, 0.6] }}
+        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute inset-6 rounded-full border border-violet-500/25"
+        animate={{ scale: [1, 1.06, 1] }}
+        transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut" }}
+      />
+      <motion.div
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative flex size-24 items-center justify-center rounded-[1.75rem] border border-white/10 bg-card shadow-glow"
+      >
+        <ShieldCheck className="size-11 text-primary" strokeWidth={1.8} />
+      </motion.div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Welcome flow — 3 short, skippable intro screens                     */
+/* ------------------------------------------------------------------ */
+
+type WelcomeStep = 0 | 1 | 2;
+
+const slide: Record<string, unknown> = {
+  initial: { opacity: 0, x: 40 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -40 },
+  transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+};
+
+function WelcomeFlow() {
   const { t } = useI18n();
+  const [step, setStep] = useState<WelcomeStep>(0);
+
+  const visual =
+    step === 0 ? (
+      <motion.div
+        initial={{ scale: 0.7, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <LogoMark size={132} />
+      </motion.div>
+    ) : step === 1 ? (
+      <ConnectionVisual />
+    ) : (
+      <SafetyVisual />
+    );
+
+  return (
+    <div className="relative mx-auto flex h-dvh w-full max-w-md flex-col px-6 pt-safe">
+      {/* Top bar: wordmark + skip */}
+      <div className="flex items-center justify-between py-4">
+        <div className="flex items-center gap-2">
+          <LogoMark size={26} variant="mark" />
+          <span className="font-display text-base font-bold tracking-[0.2em]">VYBE</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setStep(2)}
+          className="rounded-full px-3 py-2 text-sm font-semibold text-muted-foreground active:bg-muted"
+        >
+          {t("landing.skip")}
+        </button>
+      </div>
+
+      {/* Slide content */}
+      <div className="flex flex-1 flex-col">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={step}
+            {...slide}
+            className="flex flex-1 flex-col items-center justify-center pb-6 text-center"
+          >
+            {step > 0 && (
+              <button
+                type="button"
+                onClick={() => setStep((step - 1) as WelcomeStep)}
+                aria-label={t("common.back")}
+                className="absolute left-1 top-1 flex size-10 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
+              >
+                <ArrowLeft className="size-5" />
+              </button>
+            )}
+            {visual}
+            <h1
+              className={
+                step === 0
+                  ? "mt-8 font-display text-4xl font-bold tracking-tight"
+                  : "mt-8 font-display text-3xl font-bold tracking-tight"
+              }
+            >
+              {step === 0
+                ? t("landing.welcomeTitle")
+                : step === 1
+                  ? t("landing.screen2Title")
+                  : t("landing.screen3Title")}
+            </h1>
+            <p className="mt-3 max-w-[17rem] text-sm leading-relaxed text-muted-foreground">
+              {step === 0
+                ? t("landing.welcomeSub")
+                : step === 1
+                  ? t("landing.screen2Desc")
+                  : t("landing.screen3Desc")}
+            </p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom: dots + primary CTA */}
+      <div className="pb-safe pb-8">
+        <div className="mb-6 flex items-center justify-center gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Step ${i + 1}`}
+              onClick={() => setStep(i as WelcomeStep)}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === step
+                  ? "w-6 vybe-gradient"
+                  : "w-1.5 bg-muted-foreground/25"
+              }`}
+            />
+          ))}
+        </div>
+        <Link
+          to="/auth"
+          className="group flex min-h-13 w-full items-center justify-center gap-2 rounded-full vybe-gradient px-6 text-base font-bold text-white shadow-glow transition-transform active:scale-[0.98]"
+        >
+          {step === 0 ? t("landing.getStarted") : t("landing.continue")}
+          <ArrowRight className="size-5 transition-transform group-active:translate-x-0.5" />
+        </Link>
+        {step === 0 && (
+          <Link
+            to="/auth"
+            className="mt-4 block w-full text-center text-sm font-semibold text-muted-foreground"
+          >
+            {t("landing.logIn")}
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Compact hero for already-authenticated visitors                     */
+/* ------------------------------------------------------------------ */
+
+function AuthedHero() {
+  const { t } = useI18n();
+  return (
+    <div className="relative mx-auto flex h-dvh w-full max-w-md flex-col items-center justify-center px-6 text-center">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-24 h-64 w-64 -translate-x-1/2 rounded-full bg-violet-600/20 blur-[90px]" />
+      </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <LogoMark size={96} />
+      </motion.div>
+      <motion.h1
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15 }}
+        className="relative mt-7 font-display text-3xl font-bold tracking-tight"
+      >
+        {t("landing.welcomeTitle")}
+      </motion.h1>
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="relative mt-3 max-w-[17rem] text-sm leading-relaxed text-muted-foreground"
+      >
+        {t("landing.welcomeSub")}
+      </motion.p>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.45 }}
+        className="relative mt-8 w-full max-w-xs"
+      >
+        <Link
+          to="/app/discover"
+          className="flex min-h-13 w-full items-center justify-center gap-2 rounded-full vybe-gradient px-6 text-base font-bold text-white shadow-glow transition-transform active:scale-[0.98]"
+        >
+          {t("landing.openApp")}
+          <ArrowRight className="size-5" />
+        </Link>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Landing                                                             */
+/* ------------------------------------------------------------------ */
+
+export default function Landing() {
   const { isAuthenticated, isLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(() => {
     try {
@@ -128,176 +389,7 @@ export default function Landing() {
         {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
       </AnimatePresence>
 
-      {/* Ambient background */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-600/20 blur-[90px]" />
-        <div className="absolute right-[-80px] top-1/3 h-64 w-64 rounded-full bg-fuchsia-600/15 blur-[90px]" />
-        <div className="absolute bottom-[-60px] left-[-60px] h-64 w-64 rounded-full bg-sky-500/10 blur-[90px]" />
-      </div>
-
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 lg:max-w-5xl lg:px-10">
-        {/* Nav */}
-        <motion.header
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center justify-between pt-safe py-5"
-        >
-          <div className="flex items-center gap-2.5">
-            <LogoMark size={34} />
-            <span className="font-display text-xl font-bold tracking-[0.2em]">
-              VYBE
-            </span>
-          </div>
-          {isAuthenticated && !isLoading ? (
-            <Link
-              to="/app/discover"
-              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow"
-            >
-              {t("landing.openApp")}
-            </Link>
-          ) : (
-            <Link
-              to="/auth"
-              className="text-sm font-semibold text-muted-foreground hover:text-foreground"
-            >
-              {t("auth.logIn")}
-            </Link>
-          )}
-        </motion.header>
-
-        {/* Hero */}
-        <section className="flex flex-1 flex-col items-center py-10 lg:flex-row lg:gap-16 lg:py-16">
-          <div className="flex flex-col items-center text-center lg:flex-1 lg:items-start lg:text-left">
-            <motion.span
-              variants={fadeUp}
-              initial="hidden"
-              animate="show"
-              custom={0}
-              className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary"
-            >
-              <Globe2 className="size-3.5" />
-              {t("landing.eyebrow")}
-            </motion.span>
-
-            <motion.h1
-              variants={fadeUp}
-              initial="hidden"
-              animate="show"
-              custom={1}
-              className="font-display text-5xl font-bold leading-[1.02] tracking-tight lg:text-6xl"
-            >
-              Find your
-              <br />
-              <span className="vybe-gradient-text">vibe.</span>
-            </motion.h1>
-
-            <motion.p
-              variants={fadeUp}
-              initial="hidden"
-              animate="show"
-              custom={2}
-              className="mt-5 max-w-sm text-base leading-relaxed text-muted-foreground"
-            >
-              {t("landing.subheadline")}
-            </motion.p>
-
-            <motion.div
-              variants={fadeUp}
-              initial="hidden"
-              animate="show"
-              custom={3}
-              className="mt-8 flex w-full max-w-sm flex-col gap-3"
-            >
-              <Link
-                to="/auth"
-                className="group flex min-h-13 items-center justify-center gap-2 rounded-full vybe-gradient px-6 py-3.5 text-base font-bold text-white shadow-glow transition-transform active:scale-[0.98]"
-              >
-                {t("landing.cta")}
-                <ArrowRight className="size-5 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-              <p className="text-center text-xs text-muted-foreground">
-                {t("auth.ageNote")}
-              </p>
-            </motion.div>
-          </div>
-
-          {/* Phone preview */}
-          <div className="mt-14 lg:mt-0 lg:flex-1">
-            <MiniProfileCard />
-          </div>
-        </section>
-
-        {/* Features */}
-        <section className="grid gap-4 pb-10 sm:grid-cols-3 lg:gap-6">
-          {[
-            {
-              icon: <HeartHandshake className="size-5" />,
-              title: t("landing.feature1Title"),
-              desc: t("landing.feature1Desc"),
-            },
-            {
-              icon: <Globe2 className="size-5" />,
-              title: t("landing.feature2Title"),
-              desc: t("landing.feature2Desc"),
-            },
-            {
-              icon: <ShieldCheck className="size-5" />,
-              title: t("landing.feature3Title"),
-              desc: t("landing.feature3Desc"),
-            },
-          ].map((f, i) => (
-            <motion.div
-              key={f.title}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-40px" }}
-              custom={i}
-              className="rounded-3xl border border-border/80 bg-card/70 p-5 backdrop-blur"
-            >
-              <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 text-primary">
-                {f.icon}
-              </div>
-              <h3 className="font-display text-base font-bold">{f.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {f.desc}
-              </p>
-            </motion.div>
-          ))}
-        </section>
-
-        {/* Stats */}
-        <motion.section
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="mb-10 rounded-3xl border border-border/80 bg-card/60 p-6 backdrop-blur"
-        >
-          <div className="grid grid-cols-3 gap-4 text-center">
-            {[
-              { value: "1M+", label: t("landing.statsUsers") },
-              { value: "3s", label: t("landing.statsMatches") },
-              { value: "120+", label: t("landing.statsCountries") },
-            ].map((s) => (
-              <div key={s.label}>
-                <p className="font-display text-2xl font-bold vybe-gradient-text">
-                  {s.value}
-                </p>
-                <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
-                  {s.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </motion.section>
-
-        <footer className="pb-safe pb-8 pt-2 text-center text-xs text-muted-foreground">
-          <p>{t("landing.footer")}</p>
-          <p className="mt-1 opacity-70">{t("app.tagline")}</p>
-        </footer>
-      </div>
+      {isAuthenticated && !isLoading ? <AuthedHero /> : <WelcomeFlow />}
     </div>
   );
 }

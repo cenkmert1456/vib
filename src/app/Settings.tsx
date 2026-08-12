@@ -44,6 +44,7 @@ import {
   MapPin,
   Moon,
   Palette,
+  Search,
   ShieldCheck,
   Sun,
   Trash2,
@@ -152,8 +153,85 @@ function Row({
   );
 }
 
+function LanguageSheet() {
+  const { t, lang, langPref, setLang } = useI18n();
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const langs = (Object.keys(LANGUAGE_NAMES) as Lang[]).filter((l) =>
+    !q ||
+    LANGUAGE_NAMES[l].toLowerCase().includes(q) ||
+    l.toLowerCase().includes(q),
+  );
+  const automaticActive = langPref === "auto";
+  return (
+    <div className="pb-safe">
+      <SheetTitle className="text-center font-display">
+        {t("settings.language")}
+      </SheetTitle>
+      <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/40 px-3.5">
+        <Search className="size-4 shrink-0 text-muted-foreground" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("settings.languageSearch")}
+          className="h-11 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+        />
+      </div>
+      <div className="no-scrollbar mt-3 max-h-[46vh] space-y-1 overflow-y-auto pr-1">
+        <button
+          type="button"
+          onClick={() => setLang("auto")}
+          className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors ${
+            automaticActive ? "bg-primary/10" : "active:bg-muted/70"
+          }`}
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 text-primary">
+            <Languages className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-medium">
+              {t("settings.languageAutomatic")}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {t("settings.languageAutomaticDesc")}
+            </span>
+          </span>
+          {automaticActive && <Check className="size-5 shrink-0 text-primary" />}
+        </button>
+        <div className="mx-3 my-1 h-px bg-border/70" />
+        {langs.map((l) => {
+          const selected = !automaticActive && lang === l;
+          return (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setLang(l)}
+              className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors ${
+                selected ? "bg-primary/10" : "active:bg-muted/70"
+              }`}
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-card font-display text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {l.split("-")[0].slice(0, 2)}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[15px] font-medium">
+                {LANGUAGE_NAMES[l]}
+              </span>
+              {selected && <Check className="size-5 shrink-0 text-primary" />}
+            </button>
+          );
+        })}
+        {langs.length === 0 && (
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            No languages found
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function RootView({ onOpen }: { onOpen: (v: View) => void }) {
-  const { t, lang, setLang } = useI18n();
+  const { t, lang, langPref } = useI18n();
   const myProfile = useQuery(api.profiles.myProfile);
   const setShowInDiscovery = useMutation(api.profiles.setShowInDiscovery);
   const { user } = useAuth();
@@ -243,28 +321,15 @@ function RootView({ onOpen }: { onOpen: (v: View) => void }) {
                   {t("settings.language")}
                 </span>
                 <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                  {LANGUAGE_NAMES[lang]}
+                  {langPref === "auto"
+                    ? t("settings.languageAutomatic")
+                    : LANGUAGE_NAMES[lang]}
                 </span>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               </button>
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-3xl">
-              <SheetTitle className="text-center font-display">
-                {t("settings.language")}
-              </SheetTitle>
-              <div className="mt-3 flex flex-col gap-1.5 pb-safe">
-                {(Object.keys(LANGUAGE_NAMES) as Lang[]).map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    onClick={() => setLang(l)}
-                    className="flex min-h-12 items-center justify-between rounded-xl px-4 text-base font-medium active:bg-muted"
-                  >
-                    {LANGUAGE_NAMES[l]}
-                    {lang === l && <Check className="size-4 text-primary" />}
-                  </button>
-                ))}
-              </div>
+              <LanguageSheet />
             </SheetContent>
           </Sheet>
         </div>

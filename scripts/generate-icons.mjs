@@ -1,110 +1,99 @@
 /**
- * Generates VYBE app icons + splash assets for both native platforms from
- * the brand logo (src/assets/logo.svg).
+ * VYBE icon generator — renders the brand SVG into every native icon slot:
  *
- * Usage: bun scripts/generate-icons.mjs
+ *   - Android launcher (legacy + adaptive foreground) at all densities
+ *   - iOS AppIcon set (all sizes from the asset catalog)
+ *   - iOS launch splash (2732x2732, brand-dark with centered mark)
+ *
+ * Usage: bun run mobile:icons   (requires `sharp`, a dev dependency)
  */
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
 import sharp from "sharp";
-import { mkdir, readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const logo = await readFile(join(root, "src/assets/logo.svg"));
+const ROOT = path.resolve(import.meta.dirname, "..");
+const BRAND_SVG = path.join(ROOT, "src/assets/logo.svg");
 
-const ANDROID = join(root, "android/app/src/main/res");
-const IOS = join(root, "ios/App/App/Assets.xcassets/AppIcon.appiconset");
+/** Mark-only SVG (transparent background) used for splash + adaptive layers. */
+const MARK_SVG = `<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="vybeV" x1="12" y1="12" x2="52" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="0.55" stop-color="#C026D3"/>
+      <stop offset="1" stop-color="#FF5FA2"/>
+    </linearGradient>
+    <linearGradient id="vybeDot" x1="27" y1="45" x2="37" y2="57" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF5FA2"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0,6) scale(8)">
+    <path d="M13 14 C 25 19, 30.5 33, 32 46" stroke="url(#vybeV)" stroke-width="8.5" stroke-linecap="round" fill="none"/>
+    <path d="M51 14 C 39 19, 33.5 33, 32 46" stroke="url(#vybeV)" stroke-width="8.5" stroke-linecap="round" fill="none"/>
+    <circle cx="32" cy="51.5" r="3" fill="url(#vybeDot)"/>
+  </g>
+</svg>`;
 
-/** Android legacy launcher sizes (px at each density bucket). */
-const ANDROID_MIPMAPS = [
-  ["mdpi", 48],
-  ["hdpi", 72],
-  ["xhdpi", 96],
-  ["xxhdpi", 144],
-  ["xxxhdpi", 192],
-];
-
-/** iOS AppIcon sizes: [filename, px]. */
-const IOS_ICONS = [
-  ["AppIcon-20@1x.png", 20],
-  ["AppIcon-20@2x.png", 40],
-  ["AppIcon-20@3x.png", 60],
-  ["AppIcon-29@1x.png", 29],
-  ["AppIcon-29@2x.png", 58],
-  ["AppIcon-29@3x.png", 87],
-  ["AppIcon-40@1x.png", 40],
-  ["AppIcon-40@2x.png", 80],
-  ["AppIcon-40@3x.png", 120],
-  ["AppIcon-60@2x.png", 120],
-  ["AppIcon-60@3x.png", 180],
-  ["AppIcon-76@1x.png", 76],
-  ["AppIcon-76@2x.png", 152],
-  ["AppIcon-83.5@2x.png", 167],
-  ["AppIcon-512@2x.png", 1024],
-];
-
-/** Android splash sizes: [density, width] — 4:3-ish safe region, full-bleed PNG. */
-const ANDROID_SPLASHES = [
-  ["port-hdpi", 480, 320],
-  ["port-mdpi", 320, 480],
-  ["port-xhdpi", 720, 480],
-  ["port-xxhdpi", 960, 640],
-  ["port-xxxhdpi", 1280, 960],
-  ["land-hdpi", 800, 480],
-  ["land-mdpi", 480, 320],
-  ["land-xhdpi", 1280, 720],
-  ["land-xxhdpi", 1600, 960],
-  ["land-xxxhdpi", 1920, 1280],
-];
-
-async function writePng(file, buffer) {
-  await mkdir(dirname(file), { recursive: true });
-  await sharp(buffer).png().toFile(file);
-  console.log("wrote", file.replace(root + "/", ""));
+async function pngFromSvg(svg, size) {
+  return sharp(Buffer.from(svg)).resize(size, size).png().toBuffer();
 }
 
-// --- Android launcher icons ------------------------------------------------
-for (const [density, size] of ANDROID_MIPMAPS) {
-  const icon = await sharp(logo).resize(size, size).png().toBuffer();
-  await writePng(join(ANDROID, `mipmap-${density}/ic_launcher.png`), icon);
-  await writePng(join(ANDROID, `mipmap-${density}/ic_launcher_round.png`), icon);
-  // Adaptive-icon foreground: logo at ~70% with brand background baked in.
-  const fg = await sharp(logo)
-    .resize(Math.round(size * 0.7), Math.round(size * 0.7))
+async function main() {
+  const brand = await readFile(BRAND_SVG, "utf8");
+
+  // ---- Android -----------------------------------------------------------
+  const ANDROID_DENSITIES = [
+    { dpi: "mdpi", icon: 48, fg: 108 },
+    { dpi: "hdpi", icon: 72, fg: 162 },
+    { dpi: "xhdpi", icon: 96, fg: 216 },
+    { dpi: "xxhdpi", icon: 144, fg: 324 },
+    { dpi: "xxxhdpi", icon: 192, fg: 432 },
+  ];
+  for (const { dpi, icon, fg } of ANDROID_DENSITIES) {
+    const dir = path.join(ROOT, `android/app/src/main/res/mipmap-${dpi}`);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "ic_launcher.png"), await pngFromSvg(brand, icon));
+    await writeFile(path.join(dir, "ic_launcher_foreground.png"), await pngFromSvg(brand, fg));
+    console.log(`android mipmap-${dpi}: ic_launcher ${icon}px, foreground ${fg}px`);
+  }
+
+  // ---- iOS AppIcon --------------------------------------------------------
+  const iOS_ICONS = [
+    ["AppIcon-20@1x.png", 20], ["AppIcon-20@2x.png", 40], ["AppIcon-20@3x.png", 60],
+    ["AppIcon-29@1x.png", 29], ["AppIcon-29@2x.png", 58], ["AppIcon-29@3x.png", 87],
+    ["AppIcon-40@1x.png", 40], ["AppIcon-40@2x.png", 80], ["AppIcon-40@3x.png", 120],
+    ["AppIcon-60@2x.png", 120], ["AppIcon-60@3x.png", 180],
+    ["AppIcon-76@1x.png", 76], ["AppIcon-76@2x.png", 152],
+    ["AppIcon-83.5@2x.png", 167],
+    ["AppIcon-512@2x.png", 1024],
+  ];
+  const iosDir = path.join(ROOT, "ios/App/App/Assets.xcassets/AppIcon.appiconset");
+  await mkdir(iosDir, { recursive: true });
+  for (const [name, size] of iOS_ICONS) {
+    await writeFile(path.join(iosDir, name), await pngFromSvg(brand, size));
+    console.log(`ios AppIcon: ${name} (${size}px)`);
+  }
+
+  // ---- iOS splash (2732x2732, brand dark + centered mark) -----------------
+  const splashDir = path.join(ROOT, "ios/App/App/Assets.xcassets/Splash.imageset");
+  await mkdir(splashDir, { recursive: true });
+  const mark = await pngFromSvg(MARK_SVG, 820);
+  const splash = await sharp({
+    create: { width: 2732, height: 2732, channels: 3, background: { r: 11, g: 11, b: 18 } },
+  })
+    .composite([{ input: mark, gravity: "centre" }])
     .png()
     .toBuffer();
-  await writePng(join(ANDROID, `mipmap-${density}/ic_launcher_foreground.png`), fg);
+  for (const name of ["splash-2732x2732.png", "splash-2732x2732-1.png", "splash-2732x2732-2.png"]) {
+    await writeFile(path.join(splashDir, name), splash);
+    console.log(`ios splash: ${name}`);
+  }
+
+  console.log("Done — all icons regenerated from the new VYBE mark.");
 }
 
-// --- Android splash --------------------------------------------------------
-for (const [name, w, h] of ANDROID_SPLASHES) {
-  const splash = await sharp({
-    create: { width: w, height: h, channels: 3, background: "#0b0b12" },
-  })
-    .composite([
-      {
-        input: await sharp(logo).resize(Math.round(Math.min(w, h) * 0.42)).png().toBuffer(),
-        gravity: "centre",
-      },
-    ])
-    .png()
-    .toFile(join(ANDROID, `drawable-${name}/splash.png`));
-  console.log("wrote", `android/app/src/main/res/drawable-${name}/splash.png`);
-  void splash;
-}
-await writePng(join(ANDROID, "drawable/splash.png"), await sharp(logo).resize(480, 320).png().toBuffer());
-
-// --- iOS AppIcon -----------------------------------------------------------
-for (const [file, size] of IOS_ICONS) {
-  const icon = await sharp(logo).resize(size, size).png().toBuffer();
-  await writePng(join(IOS, file), icon);
-}
-
-// --- iOS splash ------------------------------------------------------------
-// LaunchScreen background handled by the storyboard; provide a brand image.
-const iosSplash = await sharp(logo).resize(2732, 2732).png().toBuffer();
-await writePng(join(IOS, "../Splash.imageset/splash-2732x2732.png"), iosSplash);
-await writePng(join(IOS, "../Splash.imageset/splash-2732x2732-1.png"), iosSplash);
-await writePng(join(IOS, "../Splash.imageset/splash-2732x2732-2.png"), iosSplash);
-
-console.log("Done. Run `npx cap sync` to push assets into the native projects.");
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -122,7 +122,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               >
-                <LogoMark size={84} />
+                <LogoMark size={92} variant="mark" />
               </motion.div>
               <h1 className="mt-6 font-display text-4xl font-bold tracking-tight">
                 {t("auth.findYourVibe")}
@@ -135,7 +135,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             <div className="flex flex-col gap-3">
               <Button
                 variant="outline"
-                className="h-13 rounded-full border-border bg-card text-base font-semibold"
+                className="h-13 rounded-full border-border bg-card text-base font-semibold transition-transform active:scale-[0.98]"
                 onClick={() => handleOAuth("Apple")}
               >
                 <Apple className="size-5" />
@@ -143,14 +143,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               </Button>
               <Button
                 variant="outline"
-                className="h-13 rounded-full border-border bg-card text-base font-semibold"
+                className="h-13 rounded-full border-border bg-card text-base font-semibold transition-transform active:scale-[0.98]"
                 onClick={() => handleOAuth("Google")}
               >
                 <GoogleIcon />
                 {t("auth.continueWithGoogle")}
               </Button>
               <Button
-                className="h-13 rounded-full vybe-gradient text-base font-bold text-white shadow-glow"
+                className="h-13 rounded-full vybe-gradient text-base font-bold text-white shadow-glow transition-transform active:scale-[0.98]"
                 onClick={() => setStep("email")}
               >
                 <Mail className="size-5" />
@@ -190,7 +190,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </button>
 
             <div className="mb-8">
-              <LogoMark size={48} />
+              <LogoMark size={48} variant="mark" />
               <h1 className="mt-5 font-display text-2xl font-bold">
                 {step === "otp" ? t("auth.checkEmail") : t("auth.emailTitle")}
               </h1>
