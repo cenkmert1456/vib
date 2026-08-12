@@ -59,6 +59,11 @@ jobs:
       - name: Sync Capacitor (Android)
         run: npx cap sync android
 
+      - name: Verify bundled web assets are in the APK project
+        # Prevents shipping an APK that opens https://localhost with
+        # "webpage not found" (missing assets/public bundle).
+        run: bun scripts/verify-bundle.mjs
+
       - name: Point Gradle at the Android SDK
         run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 

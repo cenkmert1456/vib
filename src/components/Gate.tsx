@@ -1,11 +1,59 @@
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
-import type { ReactNode } from "react";
+import { useConvex, useQuery } from "convex/react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router";
 import { LogoMark } from "@/components/Logo";
+import { ConnectionError } from "@/components/ConnectionError";
+import { useI18n } from "@/lib/i18n";
+
+/**
+ * How long to wait before concluding the backend is unreachable. Covers both
+ * a cold start with no network and a connection that drops mid-session.
+ */
+const OFFLINE_TIMEOUT_MS = 8000;
 
 export function Gate({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
+  const client = useConvex();
   const myProfile = useQuery(api.profiles.myProfile);
+  const [offline, setOffline] = useState(false);
+
+  // Watch the live Convex connection state. If the backend never connects
+  // (or stays disconnected) past the grace window, show the branded offline
+  // screen with a retry action instead of an endless spinner.
+  useEffect(() => {
+    let lastConnectedAt = 0;
+    const check = () => {
+      const cs = client.connectionState();
+      if (cs.isWebSocketConnected) {
+        lastConnectedAt = Date.now();
+        setOffline(false);
+      } else if (lastConnectedAt !== 0) {
+        const downFor = Date.now() - lastConnectedAt;
+        if (downFor > OFFLINE_TIMEOUT_MS) setOffline(true);
+      }
+    };
+    check();
+    // Initial-connection grace period (never connected yet).
+    const initialTimer = window.setTimeout(() => {
+      if (lastConnectedAt === 0) setOffline(true);
+    }, OFFLINE_TIMEOUT_MS);
+    const interval = window.setInterval(check, 1500);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(interval);
+    };
+  }, [client]);
+
+  if (offline) {
+    return (
+      <ConnectionError
+        title={t("common.offlineTitle")}
+        message={t("common.offlineDesc")}
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
 
   if (myProfile === undefined) {
     return (

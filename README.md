@@ -96,24 +96,37 @@ automatically on first build.
 ## Sync Mobile Platforms
 
 ```bash
-bun run mobile:sync    # bun run build && npx cap sync
-npx cap sync android   # sync only Android
-npx cap sync ios       # sync only iOS
+bun run mobile:sync    # bun run build && npx cap sync && verify bundle
+npx cap sync android   # sync only Android (after a build)
+npx cap sync ios       # sync only iOS (after a build)
 ```
 
-`cap sync` copies the freshly built web assets into the native projects and
-updates plugins. Always run it after installing a new Capacitor plugin or
-changing `capacitor.config.ts`.
+`mobile:sync` builds the production web app **first**, copies it into the
+native projects, and then **verifies** that the full bundle landed in
+`android/app/src/main/assets/public` (`bun scripts/verify-bundle.mjs`).
+
+> ⚠️ **Never run `cap sync` without a fresh `bun run build` first.** The Android
+> app loads its UI from the bundled assets inside the APK — if they are
+> missing or stale, the app opens `https://localhost` (Capacitor's virtual
+> origin for bundled assets — **not** a real server) and shows a browser-style
+> "webpage not found" error. A correct build+sync produces an app that works
+> fully offline for the splash, welcome, and login screens.
 
 ## Build Android APK
 
 ```bash
-bun run mobile:sync
+bun run mobile:sync   # build + sync + verify (fails loudly if the bundle is missing)
 cd android
 ./gradlew assembleDebug
 ```
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+Verify the APK actually contains the web bundle before distributing:
+
+```bash
+unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep "assets/public/index.html"
+```
 
 Release build (unsigned):
 

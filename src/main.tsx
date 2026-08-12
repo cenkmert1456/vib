@@ -6,6 +6,7 @@ import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { InstrumentationProvider } from "./instrumentation.tsx";
+import { ConnectionError } from "@/components/ConnectionError";
 import { ThemeProvider } from "next-themes";
 import React, { StrictMode, lazy, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -127,36 +128,21 @@ function createConvexClient(): ConvexReactClient | null {
   }
 }
 
-/** Branded offline/backend-unavailable screen with a retry action. */
-function BackendUnavailable() {
-  return (
-    <div className="flex h-dvh flex-col items-center justify-center bg-background px-8 text-center">
-      <LogoMark size={76} variant="mark" className="opacity-90" />
-      <h1 className="mt-7 font-display text-xl font-bold">
-        VYBE can&apos;t connect right now
-      </h1>
-      <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
-        The app needs a connection to the VYBE backend to start. Check your
-        connection and try again.
-      </p>
-      <button
-        type="button"
-        onClick={() => window.location.reload()}
-        className="mt-7 flex h-12 items-center justify-center rounded-full vybe-gradient px-8 text-sm font-bold text-white shadow-glow transition-transform active:scale-[0.98]"
-      >
-        Try again
-      </button>
-    </div>
-  );
-}
-
 /**
  * Provides Convex only when the client initializes successfully, so startup
  * always renders something instead of crashing with a blank screen.
  */
 function ConvexGate({ children }: { children: React.ReactNode }) {
   const [client] = useState(createConvexClient);
-  if (!client) return <BackendUnavailable />;
+  if (!client) {
+    return (
+      <ConnectionError
+        title="Couldn't connect right now"
+        message="The app needs a connection to the VYBE backend to start. Check your connection and try again."
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
   return <ConvexAuthProvider client={client}>{children}</ConvexAuthProvider>;
 }
 
