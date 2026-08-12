@@ -7,6 +7,7 @@ import { haptic } from "@/lib/haptics";
 import { CHAT_EMOJI, REPORT_CATEGORIES } from "@/lib/constants";
 import { ImageWithFallback } from "@/components/mobile/ImageWithFallback";
 import { ConfirmDialog } from "@/components/mobile/ConfirmDialog";
+import { VerifiedBadge } from "@/components/mobile/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -300,7 +301,14 @@ export default function Chat() {
             />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-bold">{other.firstName}</p>
+            <p className="flex items-center gap-1.5 text-[15px] font-bold">
+              <span className="truncate">{other.firstName}</span>
+              <VerifiedBadge
+                verified={other.verified}
+                status={other.verificationStatus}
+                className="shrink-0"
+              />
+            </p>
             <p className="truncate text-[11px] text-muted-foreground">
               {typing
                 ? `${other.firstName} ${t("messages.typing")}`

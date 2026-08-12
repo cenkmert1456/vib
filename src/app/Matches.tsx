@@ -4,9 +4,14 @@ import { useQuery } from "convex/react";
 import { Link, useNavigate } from "react-router";
 import { useI18n } from "@/lib/i18n";
 import { ImageWithFallback } from "@/components/mobile/ImageWithFallback";
-import { EmptyState, ListSkeleton, SectionTitle } from "@/components/mobile/ui";
+import {
+  EmptyState,
+  ListSkeleton,
+  SectionTitle,
+  VerifiedBadge,
+} from "@/components/mobile/ui";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle } from "lucide-react";
+import { BadgeCheck, Heart, MessageCircle } from "lucide-react";
 import { useMemo } from "react";
 
 type MatchSummary = {
@@ -112,6 +117,14 @@ export default function Matches() {
                         {m.unreadCount}
                       </span>
                     )}
+                    {m.other.verified && (
+                      <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-background">
+                        <BadgeCheck
+                          className="size-3.5 text-sky-400"
+                          strokeWidth={2.6}
+                        />
+                      </span>
+                    )}
                   </div>
                   <span className="max-w-full truncate text-xs font-semibold">
                     {m.other.firstName}
@@ -202,8 +215,9 @@ export function ConversationRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-[15px] font-semibold">
-            {m.other.firstName}
+          <p className="flex items-center gap-1.5 truncate text-[15px] font-semibold">
+            <span className="truncate">{m.other.firstName}</span>
+            <VerifiedBadge verified={m.other.verified} className="shrink-0" />
           </p>
           <span className="shrink-0 text-[11px] text-muted-foreground">
             {formatRelativeTime(time)}

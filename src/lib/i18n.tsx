@@ -513,6 +513,7 @@ const en = {
   "moment.title": "VYBE Moments",
   "moment.desc": "Share a temporary moment — it disappears after 24 hours.",
   "moment.add": "Add a moment",
+  "moment.addPhoto": "Add a photo",
   "moment.caption": "Caption",
   "moment.captionPlaceholder": "What's the vibe?",
   "moment.mood": "Mood",
@@ -1070,6 +1071,7 @@ const tr: Record<TKey, string> = {
   "moment.title": "VYBE Momentleri",
   "moment.desc": "Geçici bir an paylaş — 24 saat sonra kaybolur.",
   "moment.add": "Moment ekle",
+  "moment.addPhoto": "Fotoğraf ekle",
   "moment.caption": "Başlık",
   "moment.captionPlaceholder": "Vibe ne?",
   "moment.mood": "Ruh hali",
@@ -1192,121 +1194,15 @@ const tr: Record<TKey, string> = {
   "safety.sosHint": "İstediğin kişiyi engelleyebilir veya bildirebilirsin.",
 };
 
-/**
- * Core translations for the remaining 16 languages. Keys not present here fall
- * back to English, so every string always renders. Additional keys can be
- * added per language without any code change — the dictionary is the only
- * thing to extend.
- */
-const CORE: Record<TKey, string> = {
-  "app.name": "VYBE",
-  "app.tagline": "Feel the vibe. Find your people.",
-  "nav.discover": "Discover",
-  "nav.matches": "Matches",
-  "nav.messages": "Messages",
-  "nav.activity": "Activity",
-  "nav.profile": "Profile",
-  "common.loading": "Loading",
-  "common.retry": "Try again",
-  "common.cancel": "Cancel",
-  "common.confirm": "Confirm",
-  "common.save": "Save",
-  "common.back": "Back",
-  "common.close": "Close",
-  "common.done": "Done",
-  "common.skip": "Skip",
-  "common.continue": "Continue",
-  "common.next": "Next",
-  "common.error": "Something went wrong",
-  "common.optional": "Optional",
-  "common.verified": "Verified",
-  "common.gotIt": "Got it",
-  "common.online": "Online now",
-  "landing.eyebrow": "Global social discovery",
-  "landing.headline": "Find your vibe.",
-  "landing.subheadline":
-    "Discover people, start conversations, and connect with those who match your energy.",
-  "landing.cta": "Get started",
-  "landing.openApp": "Open VYBE",
-  "landing.logIn": "I already have an account",
-  "landing.splashTagline": "Feel the vibe. Find your people.",
-  "auth.continueWithApple": "Continue with Apple",
-  "auth.continueWithGoogle": "Continue with Google",
-  "auth.continueWithEmail": "Continue with Email",
-  "auth.alreadyAccount": "Already have an account?",
-  "auth.logIn": "Log in",
-  "auth.emailTitle": "Your email",
-  "auth.sendCode": "Send code",
-  "auth.verify": "Verify & continue",
-  "auth.ageNote": "You must be at least 18 to use VYBE.",
-  "auth.termsNote": "By continuing you agree to our Terms and Privacy Policy.",
-  "onboard.title": "Create your profile",
-  "onboard.step": "Step {current} of {total}",
-  "onboard.nameTitle": "What's your name?",
-  "onboard.genderTitle": "What's your gender?",
-  "onboard.interestedTitle": "Who are you interested in?",
-  "onboard.locationTitle": "Where are you?",
-  "onboard.photosTitle": "Add your photos",
-  "onboard.bioTitle": "Tell us about you",
-  "onboard.interestsTitle": "Pick your interests",
-  "onboard.doneTitle": "You're all set!",
-  "onboard.startDiscovering": "Start discovering",
-  "gender.woman": "Woman",
-  "gender.man": "Man",
-  "gender.nonbinary": "Non-binary",
-  "gender.other": "Other",
-  "discover.title": "Discover",
-  "discover.emptyTitle": "You're all caught up",
-  "discover.pass": "Pass",
-  "discover.like": "Like",
-  "discover.superVybe": "Super VYBE",
-  "discover.tapHint": "Tap the card to view the full profile",
-  "discover.swipeHint": "Swipe right to like, left to pass, up for Super VYBE",
-  "profile.about": "About",
-  "profile.interests": "Interests",
-  "profile.languages": "Languages",
-  "profile.prompts": "Prompts",
-  "profile.edit": "Edit profile",
-  "profile.settings": "Settings",
-  "profile.bio": "Bio",
-  "profile.report": "Report",
-  "profile.block": "Block",
-  "matches.title": "Matches",
-  "matches.emptyTitle": "No matches yet",
-  "matches.sayHi": "Say hi",
-  "messages.title": "Messages",
-  "messages.emptyTitle": "No messages yet",
-  "messages.placeholder": "Message…",
-  "messages.send": "Send",
-  "activity.title": "Activity",
-  "activity.emptyTitle": "No activity yet",
-  "activity.likedYou": "liked you",
-  "activity.likeBack": "Like back",
-  "settings.title": "Settings",
-  "settings.account": "Account",
-  "settings.email": "Email",
-  "settings.discovery": "Discovery Preferences",
-  "settings.notifications": "Notifications",
-  "settings.appearance": "Appearance",
-  "settings.theme": "Theme",
-  "settings.language": "Language",
-  "settings.privacy": "Privacy & Safety",
-  "settings.support": "Support",
-  "settings.logOut": "Log out",
-  "settings.deleteAccount": "Delete account",
-  "settings.languageAutomatic": "Automatic",
-  "premium.title": "VYBE Premium",
-  "premium.monthly": "Monthly",
-  "premium.annual": "Annual",
-  "premium.upgrade": "Upgrade",
-  "premium.restore": "Restore purchases",
-  "premium.manage": "Manage subscription",
-  "premium.currentPlan": "Current plan",
-  "verify.title": "Verify your profile",
-  "verify.live.start": "Start live check",
-  "verify.success.title": "You're verified.",
-  "verify.retry": "Try again",
-};
+
+
+
+
+
+
+
+
+
 
 type PartialDict = Partial<Record<TKey, string>>;
 
@@ -3081,8 +2977,6 @@ const DICTS: Record<Lang, Dict> = Object.fromEntries(
 ) as Record<Lang, Dict>;
 DICTS.tr = { ...(en as Dict), ...(tr as Dict) };
 
-export type TKey = keyof typeof en;
-
 export const LANGUAGE_NAMES: Record<Lang, string> = {
   en: "English",
   tr: "Türkçe",
@@ -3206,16 +3100,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [lang],
   );
 
-  const formatFullDate = useCallback(
-    (ms: number) => {
-      const d = new Date(ms);
-      return d.toLocaleDateString(LOCALES[lang], {
-        day: "numeric",
-        month: "short",
-      });
-    },
-    [lang],
-  );
+  function formatFullDate(ms: number) {
+    const d = new Date(ms);
+    return d.toLocaleDateString(LOCALES[lang], {
+      day: "numeric",
+      month: "short",
+    });
+  }
 
   const setLang = useCallback((next: Lang | "auto") => setLangPref(next), []);
 

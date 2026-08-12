@@ -302,7 +302,7 @@ function BoostCard() {
     void sweep();
   }, [sweep]);
 
-  if (boost === undefined) return null;
+  if (!boost) return null;
 
   const active = boost.active ? Math.max(0, Math.ceil(boost.active.remainingMs / 60000)) : 0;
   const hasCredits = boost.credits > 0;
@@ -386,7 +386,7 @@ function QotdCard() {
   const [share, setShare] = useState(true);
   const [pending, setPending] = useState(false);
 
-  if (qotd === undefined) return null;
+  if (!qotd) return null;
 
   const submit = async () => {
     if (!answer.trim() || pending) return;

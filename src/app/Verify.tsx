@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Mode = "intro" | "requesting" | "live" | "analyzing" | "denied" | "unavailable" | "pending" | "success" | "failed";
+type Mode = "intro" | "requesting" | "live" | "analyzing" | "unavailable" | "pending" | "success" | "failed";
 
 const TIPS: TKey[] = [
   "verify.live.tip1",
@@ -49,7 +49,7 @@ export default function Verify() {
 
   // Entry state derived from the live verification status query.
   useEffect(() => {
-    if (status === undefined || startedRef.current) return;
+    if (!status || startedRef.current) return;
     if (status.verified) {
       setMode("success");
     } else if (status.status === "not_started") {
@@ -176,12 +176,6 @@ export default function Verify() {
                   {t("verify.live.analyzing")}
                 </p>
               </Centered>
-            )}
-            {mode === "denied" && (
-              <DeniedView
-                onRetry={() => setMode("live")}
-                onBack={() => setMode("intro")}
-              />
             )}
             {mode === "unavailable" && (
               <Centered>
