@@ -1,4 +1,5 @@
 import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+import { Hand } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router";
@@ -91,7 +92,23 @@ export default function Discover() {
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [actionLock, setActionLock] = useState(false);
   const [exiting, setExiting] = useState<{ id: string; dir: "left" | "right" | "up" } | null>(null);
+  const [showHint, setShowHint] = useState(() => {
+    try {
+      return !localStorage.getItem("vybe-swipe-hint-seen");
+    } catch {
+      return false;
+    }
+  });
   const prevCursorRef = useRef<string | null | undefined>(undefined);
+
+  const dismissHint = () => {
+    setShowHint(false);
+    try {
+      localStorage.setItem("vybe-swipe-hint-seen", "1");
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Append each fetched page to the queue.
   useEffect(() => {
@@ -259,6 +276,38 @@ export default function Discover() {
                 />
               )}
             </AnimatePresence>
+
+            {/* First-visit swipe hint */}
+            <AnimatePresence>
+              {top && showHint && (
+                <motion.div
+                  initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute inset-x-0 bottom-0 z-20 p-4"
+                >
+                  <div className="glass rounded-3xl border border-border/70 p-4 shadow-2xl">
+                    <div className="flex items-center gap-2">
+                      <Hand className="size-4 text-primary" />
+                      <p className="text-sm font-bold">{t("discover.swipeHint")}</p>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <HintTile label={t("discover.pass")} icon="←" />
+                      <HintTile label={t("discover.superVybe")} icon="↑" />
+                      <HintTile label={t("discover.like")} icon="→" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={dismissHint}
+                      className="mt-3 h-10 w-full rounded-full vybe-gradient text-sm font-bold text-white shadow-glow"
+                    >
+                      {t("common.gotIt")}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </>
         )}
       </div>
@@ -293,6 +342,17 @@ export default function Discover() {
           </ActionButton>
         </div>
       )}
+    </div>
+  );
+}
+
+function HintTile({ label, icon }: { label: string; icon: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1 rounded-2xl border border-border/70 bg-background/60 px-2 py-2.5">
+      <span className="text-base leading-none">{icon}</span>
+      <span className="text-[10px] font-semibold text-muted-foreground">
+        {label}
+      </span>
     </div>
   );
 }

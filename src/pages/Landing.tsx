@@ -1,4 +1,4 @@
-import { motion, type Variants } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import {
   ArrowRight,
   Globe2,
@@ -9,6 +9,51 @@ import { Link } from "react-router";
 import { LogoMark } from "@/components/Logo";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
+
+/** Splash: VYBE logo with a subtle animated entrance, shown once per session. */
+function SplashScreen({ onDone }: { onDone: () => void }) {
+  const { t } = useI18n();
+  useEffect(() => {
+    const timer = window.setTimeout(onDone, 1900);
+    return () => window.clearTimeout(timer);
+  }, [onDone]);
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.45, ease: "easeInOut" }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
+    >
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/20 blur-[100px]" />
+      </div>
+      <motion.div
+        initial={{ scale: 0.6, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <LogoMark size={96} className="shadow-glow rounded-[1.75rem]" />
+      </motion.div>
+      <motion.h1
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative mt-7 font-display text-2xl font-bold tracking-[0.24em]"
+      >
+        VYBE
+      </motion.h1>
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.65 }}
+        className="relative mt-2 text-[13px] font-medium text-muted-foreground"
+      >
+        {t("landing.splashTagline")}
+      </motion.p>
+    </motion.div>
+  );
+}
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 18 },
@@ -67,9 +112,22 @@ function MiniProfileCard() {
 export default function Landing() {
   const { t } = useI18n();
   const { isAuthenticated, isLoading } = useAuth();
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      if (sessionStorage.getItem("vybe-splash-seen")) return false;
+      sessionStorage.setItem("vybe-splash-seen", "1");
+      return true;
+    } catch {
+      return false;
+    }
+  });
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-background">
+      <AnimatePresence>
+        {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+      </AnimatePresence>
+
       {/* Ambient background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-600/20 blur-[90px]" />
