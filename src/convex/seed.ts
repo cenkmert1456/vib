@@ -28,6 +28,27 @@ export const PHOTO = {
   m10: img("photo-1492562080023-ab3db95bfbce"),
 };
 
+const CITY_CODES: Record<string, string> = {
+  Istanbul: "TR",
+  Ankara: "TR",
+  "İzmir": "TR",
+  Berlin: "DE",
+  London: "GB",
+  Paris: "FR",
+  "New York": "US",
+  "Los Angeles": "US",
+  Dubai: "AE",
+  Tokyo: "JP",
+  Seoul: "KR",
+  Barcelona: "ES",
+  Amsterdam: "NL",
+  "São Paulo": "BR",
+  Sydney: "AU",
+  "Cape Town": "ZA",
+  Lisbon: "PT",
+  "Mexico City": "MX",
+};
+
 type DemoProfile = {
   firstName: string;
   dateOfBirth: number;
@@ -360,9 +381,13 @@ export const seedDemoProfiles = mutation({
         interests: p.interests,
         languages: p.languages,
         city: p.city,
+        countryCode: CITY_CODES[p.city],
+        countryName: undefined,
+        cityId: p.city,
         approxLat: p.approxLat,
         approxLng: p.approxLng,
         lifestyle: p.lifestyle,
+        relationshipIntentions: [],
         prompts: p.prompts,
         verified: p.verified,
         verificationStatus: p.verified ? "verified" : "none",

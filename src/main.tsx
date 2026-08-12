@@ -30,6 +30,8 @@ const MatchMoment = lazy(() => import("./app/MatchMoment.tsx"));
 const Chat = lazy(() => import("./app/Chat.tsx"));
 const EditProfile = lazy(() => import("./app/EditProfile.tsx"));
 const Settings = lazy(() => import("./app/Settings.tsx"));
+const Premium = lazy(() => import("./app/Premium.tsx"));
+const Verify = lazy(() => import("./app/Verify.tsx"));
 
 function RouteLoading() {
   return (
@@ -214,6 +216,26 @@ createRoot(document.getElementById("root")!).render(
                       <RequireAuth>
                         <Gate>
                           <Settings />
+                        </Gate>
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="/app/premium"
+                    element={
+                      <RequireAuth>
+                        <Gate>
+                          <Premium />
+                        </Gate>
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="/app/verify"
+                    element={
+                      <RequireAuth>
+                        <Gate>
+                          <Verify />
                         </Gate>
                       </RequireAuth>
                     }

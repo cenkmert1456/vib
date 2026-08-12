@@ -7,6 +7,7 @@ import {
   getMyProfile,
   nowMs,
 } from "./helpers";
+import { entitlementsForUser } from "./entitlements";
 
 export const DISCOVER_PAGE_SIZE = 10;
 
@@ -15,7 +16,9 @@ const PAGE_SIZE = DISCOVER_PAGE_SIZE;
 /**
  * Paginated discovery deck. Excludes profiles the user already swiped,
  * blocked profiles (either direction), hidden/incomplete profiles and the
- * user's own profile. Applies age / gender / distance preferences.
+ * user's own profile. Applies age / gender / distance preferences, advanced
+ * (entitlement-gated) filters, travel mode and Boost priority ordering.
+ * All filtering happens server-side — clients never receive the full dataset.
  */
 export const discover = query({
   args: {
@@ -49,10 +52,39 @@ export const discover = query({
     for (const b of blockedByMe) blockedIds.add(b.blockedProfileId.toString());
     for (const b of blockedMe) blockedIds.add(b.blockerProfileId.toString());
 
+    // Entitlements: advanced filters only for paid tiers.
+    const ent = await entitlementsForUser(ctx, me.userId);
+    const canAdvanced = ent?.entitlements.advancedFilters ?? false;
+
+    // Resolve discovery origin: travel mode overrides physical location.
+    const now = nowMs();
+    const travelActive =
+      me.travel?.enabled &&
+      (me.travel.expiresAt === undefined || me.travel.expiresAt > now);
+    const originLat = travelActive ? (me.travel?.lat ?? me.approxLat) : me.approxLat;
+    const originLng = travelActive ? (me.travel?.lng ?? me.approxLng) : me.approxLng;
+    const originCountry = travelActive ? me.travel?.countryCode : me.countryCode;
+    const originCity = travelActive ? me.travel?.cityName : me.city;
+
     const myIdStr = me._id.toString();
     const prefs = me.discoveryPrefs;
     const wantGenders = new Set(prefs.genders);
     const myGender = me.gender;
+
+    // Boosted profiles surface first (priority discovery, backend-ordered).
+    const boosted = await ctx.db
+      .query("boosts")
+      .withIndex("by_profile", (q) => q.eq("profileId", me._id))
+      .order("desc")
+      .first();
+    void boosted;
+    const activeBoostIds = new Set<string>();
+    const boostRows = await ctx.db.query("boosts").collect();
+    for (const b of boostRows) {
+      if (b.status === "active" && b.expiresAt > now) {
+        activeBoostIds.add(b.profileId.toString());
+      }
+    }
 
     let afterCursor = true; // skip until we pass the cursor doc
     const out: typeof me[] = [];
@@ -84,20 +116,53 @@ export const discover = query({
       if (p.interestedIn.length > 0 && !p.interestedIn.includes(myGender))
         continue;
 
-      // Distance filter (skip when either side lacks coordinates).
+      // Advanced filters (paid).
+      if (canAdvanced) {
+        if (prefs.verifiedOnly && !p.verified) continue;
+        if (prefs.interests && prefs.interests.length > 0) {
+          if (!prefs.interests.some((i) => p.interests.includes(i))) continue;
+        }
+        if (prefs.languages && prefs.languages.length > 0) {
+          if (!prefs.languages.some((l) => p.languages.includes(l))) continue;
+        }
+        if (prefs.lifestyle && prefs.lifestyle.length > 0) {
+          if (!prefs.lifestyle.some((l) => p.lifestyle.includes(l))) continue;
+        }
+        if (prefs.intentions && prefs.intentions.length > 0) {
+          if (!prefs.intentions.some((i) => p.relationshipIntentions.includes(i)))
+            continue;
+        }
+        if (prefs.recentlyActiveDays && prefs.recentlyActiveDays > 0) {
+          if (p.lastActiveAt < now - prefs.recentlyActiveDays * 24 * 60 * 60 * 1000)
+            continue;
+        }
+      }
+
+      // Distance filter using the resolved origin (travel-aware).
       if (
-        me.approxLat !== undefined &&
-        me.approxLng !== undefined &&
+        originLat !== undefined &&
+        originLng !== undefined &&
         p.approxLat !== undefined &&
         p.approxLng !== undefined
       ) {
-        const d = distanceKm(me.approxLat, me.approxLng, p.approxLat, p.approxLng);
+        const d = distanceKm(originLat, originLng, p.approxLat, p.approxLng);
         if (d > prefs.distanceKm) continue;
+      } else if (travelActive && originCountry) {
+        // Traveling without exact coords: prefer the same country.
+        if (p.countryCode && p.countryCode !== originCountry) continue;
       }
 
       out.push(p);
       if (out.length >= limit) break;
     }
+
+    // Priority ordering: boosted profiles first, then recency.
+    out.sort((a, b) => {
+      const aBoost = activeBoostIds.has(a._id.toString()) ? 1 : 0;
+      const bBoost = activeBoostIds.has(b._id.toString()) ? 1 : 0;
+      if (aBoost !== bBoost) return bBoost - aBoost;
+      return b.lastActiveAt - a.lastActiveAt;
+    });
 
     const hasMore = out.length >= limit;
     return {
@@ -152,10 +217,73 @@ export const swipe = mutation({
       return { matched: false, alreadySwiped: true, matchId: null };
     }
 
+    // Daily like limit (backend source of truth).
+    const ent = await entitlementsForUser(ctx, me.userId);
+    const dailyLimit = ent?.entitlements.dailyLikeLimit ?? 20;
+    if (action === "like" || action === "superLike") {
+      const d = new Date(now);
+      const dayKey = d.toISOString().slice(0, 10);
+      const counter = await ctx.db
+        .query("usageCounters")
+        .withIndex("by_profile_key", (q) =>
+          q.eq("profileId", me._id).eq("key", `like:${dayKey}`),
+        )
+        .first();
+      if ((counter?.count ?? 0) >= dailyLimit) {
+        throw new Error("You've reached today's likes");
+      }
+      if (counter) {
+        await ctx.db.patch(counter._id, { count: counter.count + 1 });
+      } else {
+        await ctx.db.insert("usageCounters", {
+          profileId: me._id,
+          key: `like:${dayKey}`,
+          count: 1,
+        });
+      }
+    }
+
+    // Super VYBE monthly allowance.
+    if (action === "superLike") {
+      const monthlySuper = ent?.entitlements.monthlySuperVybes ?? 2;
+      const d = new Date(now);
+      const monthKey = d.toISOString().slice(0, 7);
+      const counter = await ctx.db
+        .query("usageCounters")
+        .withIndex("by_profile_key", (q) =>
+          q.eq("profileId", me._id).eq("key", `super:${monthKey}`),
+        )
+        .first();
+      if ((counter?.count ?? 0) >= monthlySuper) {
+        throw new Error("You've used all your Super VYBE this month");
+      }
+      if (counter) {
+        await ctx.db.patch(counter._id, { count: counter.count + 1 });
+      } else {
+        await ctx.db.insert("usageCounters", {
+          profileId: me._id,
+          key: `super:${monthKey}`,
+          count: 1,
+        });
+      }
+    }
+
     await ctx.db.insert("swipes", {
       fromProfileId: me._id,
       toProfileId,
       action,
+      createdAt: now,
+    });
+
+    await ctx.db.insert("analytics", {
+      profileId: me._id,
+      event:
+        action === "superLike"
+          ? "super_vybe_sent"
+          : action === "like"
+            ? "profile_liked"
+            : "profile_passed",
+      metadata: { toProfileId: toProfileId.toString() },
       createdAt: now,
     });
 
@@ -172,10 +300,10 @@ export const swipe = mutation({
 
       if (reverse && (reverse.action === "like" || reverse.action === "superLike")) {
         // Prevent duplicate matches.
-    const existingMatches = await ctx.db
-      .query("matches")
-      .withIndex("by_participants", (q) => q.eq("participants", [me._id]))
-      .collect();
+        const existingMatches = await ctx.db
+          .query("matches")
+          .withIndex("by_participants", (q) => q.eq("participants", [me._id]))
+          .collect();
         const dup = existingMatches.find(
           (m) =>
             m.status === "active" && m.participants.includes(toProfileId),
@@ -207,6 +335,12 @@ export const swipe = mutation({
               createdAt: now,
             });
           }
+          await ctx.db.insert("analytics", {
+            profileId: me._id,
+            event: "match_created",
+            metadata: { matchId: id.toString() },
+            createdAt: now,
+          });
         } else {
           matchId = dup._id;
         }
@@ -231,6 +365,123 @@ export const swipe = mutation({
     await ctx.db.patch(me._id, { lastActiveAt: now });
 
     return { matched: !!matchId, alreadySwiped: false, matchId };
+  },
+});
+
+/**
+ * Rewind: undo the most recent eligible pass. Only the latest action can be
+ * undone, only if it's a pass, and only within the entitlement's rewind
+ * allowance. The swipe record is removed server-side so the profile returns to
+ * the deck without duplicate state.
+ */
+export const rewindLast = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getMyProfile(ctx);
+    if (!me) throw new Error("Not authenticated");
+
+    const ent = await entitlementsForUser(ctx, me.userId);
+    const rewindLimit = ent?.entitlements.rewindLimit ?? 0;
+    if (rewindLimit <= 0) throw new Error("Rewind requires a paid membership");
+
+    const now = nowMs();
+    const d = new Date(now);
+    const dayKey = d.toISOString().slice(0, 10);
+    const counter = await ctx.db
+      .query("usageCounters")
+      .withIndex("by_profile_key", (q) =>
+        q.eq("profileId", me._id).eq("key", `rewind:${dayKey}`),
+      )
+      .first();
+    if ((counter?.count ?? 0) >= rewindLimit) {
+      throw new Error("You've used all your rewinds for today");
+    }
+
+    const mySwipes = await ctx.db
+      .query("swipes")
+      .withIndex("by_from", (q) => q.eq("fromProfileId", me._id))
+      .collect();
+    const latest = mySwipes.sort((a, b) => b.createdAt - a.createdAt)[0];
+    if (!latest) throw new Error("Nothing to rewind");
+
+    // Only a pass can be undone, and only if no match/conversation followed.
+    if (latest.action !== "pass") {
+      throw new Error("Only your most recent pass can be rewound");
+    }
+    const target = await ctx.db.get(latest.toProfileId);
+    const laterActivity = await ctx.db
+      .query("activity")
+      .withIndex("by_profile", (q) => q.eq("profileId", me._id))
+      .collect();
+    const conflicting = laterActivity.some(
+      (a) =>
+        a.createdAt > latest.createdAt &&
+        (a.type === "match" || a.type === "message") &&
+        a.fromProfileId === latest.toProfileId,
+    );
+    if (conflicting) throw new Error("This action can no longer be rewound");
+
+    // Full snapshot so the client can drop the profile straight back on top of
+    // the deck (matches the discover query's public shape, never raw coords).
+    const restored = target
+      ? {
+          _id: target._id.toString(),
+          firstName: target.firstName,
+          dateOfBirth: target.dateOfBirth,
+          gender: target.gender,
+          bio: target.bio,
+          photos: target.photos,
+          interests: target.interests,
+          languages: target.languages,
+          city: target.city,
+          approxLat: target.approxLat,
+          approxLng: target.approxLng,
+          verified: target.verified,
+          lastActiveAt: target.lastActiveAt,
+        }
+      : null;
+
+    await ctx.db.delete(latest._id);
+
+    if (counter) {
+      await ctx.db.patch(counter._id, { count: counter.count + 1 });
+    } else {
+      await ctx.db.insert("usageCounters", {
+        profileId: me._id,
+        key: `rewind:${dayKey}`,
+        count: 1,
+      });
+    }
+
+    await ctx.db.insert("analytics", {
+      profileId: me._id,
+      event: "rewind_used",
+      metadata: { toProfileId: latest.toProfileId.toString() },
+      createdAt: now,
+    });
+
+    return { restored, remaining: rewindLimit - (counter?.count ?? 0) - 1 };
+  },
+});
+
+/** Remaining rewind allowance for today (non-consuming). */
+export const rewindAllowance = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getMyProfile(ctx);
+    if (!me) return { remaining: 0, limit: 0 };
+    const ent = await entitlementsForUser(ctx, me.userId);
+    const limit = ent?.entitlements.rewindLimit ?? 0;
+    if (limit <= 0) return { remaining: 0, limit };
+    const d = new Date(nowMs());
+    const dayKey = d.toISOString().slice(0, 10);
+    const counter = await ctx.db
+      .query("usageCounters")
+      .withIndex("by_profile_key", (q) =>
+        q.eq("profileId", me._id).eq("key", `rewind:${dayKey}`),
+      )
+      .first();
+    return { remaining: Math.max(0, limit - (counter?.count ?? 0)), limit };
   },
 });
 

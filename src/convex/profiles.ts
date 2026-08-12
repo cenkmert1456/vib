@@ -7,6 +7,7 @@ import {
   getMyProfile,
   nowMs,
 } from "./helpers";
+import { entitlementsForUser } from "./entitlements";
 import { api } from "./_generated/api";
 
 const MIN_AGE = 18;
@@ -87,9 +88,14 @@ export const completeOnboarding = mutation({
     interests: v.array(v.string()),
     languages: v.array(v.string()),
     city: v.optional(v.string()),
+    countryCode: v.optional(v.string()),
+    countryName: v.optional(v.string()),
+    cityId: v.optional(v.string()),
     approxLat: v.optional(v.number()),
     approxLng: v.optional(v.number()),
     lifestyle: v.optional(v.array(v.string())),
+    relationshipIntentions: v.optional(v.array(v.string())),
+    education: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await currentUserId(ctx);
@@ -117,9 +123,14 @@ export const completeOnboarding = mutation({
         interests: args.interests,
         languages: args.languages,
         city: args.city ?? existing.city,
+        countryCode: args.countryCode ?? existing.countryCode,
+        countryName: args.countryName ?? existing.countryName,
+        cityId: args.cityId ?? existing.cityId,
         approxLat: args.approxLat ?? existing.approxLat,
         approxLng: args.approxLng ?? existing.approxLng,
         lifestyle: args.lifestyle ?? existing.lifestyle,
+        relationshipIntentions: args.relationshipIntentions ?? existing.relationshipIntentions,
+        education: args.education ?? existing.education,
         onboardingCompleted: true,
         completedAt: existing.completedAt ?? now,
         lastActiveAt: now,
@@ -136,9 +147,14 @@ export const completeOnboarding = mutation({
           interests: args.interests,
           languages: args.languages,
           city: args.city,
+          countryCode: args.countryCode,
+          countryName: args.countryName,
+          cityId: args.cityId,
           approxLat: args.approxLat,
           approxLng: args.approxLng,
           lifestyle: args.lifestyle ?? [],
+          relationshipIntentions: args.relationshipIntentions ?? [],
+          education: args.education,
           prompts: [],
           verified: false,
           verificationStatus: "none",
@@ -157,6 +173,7 @@ export const completeOnboarding = mutation({
     // conversation so every screen has content to show.
     await ctx.runMutation(api.seed.seedDemoProfiles);
     await ctx.runMutation(api.seed.seedInitialSocial, { profileId });
+    await ctx.runMutation(api.dailyQuestions.seedDailyQuestions);
 
     return { profileId };
   },
@@ -171,6 +188,11 @@ export const updateProfile = mutation({
     languages: v.optional(v.array(v.string())),
     lifestyle: v.optional(v.array(v.string())),
     city: v.optional(v.string()),
+    countryCode: v.optional(v.string()),
+    countryName: v.optional(v.string()),
+    cityId: v.optional(v.string()),
+    relationshipIntentions: v.optional(v.array(v.string())),
+    education: v.optional(v.string()),
     prompts: v.optional(
       v.array(v.object({ question: v.string(), answer: v.string() })),
     ),
@@ -186,6 +208,12 @@ export const updateProfile = mutation({
     if (args.languages !== undefined) patch.languages = args.languages;
     if (args.lifestyle !== undefined) patch.lifestyle = args.lifestyle;
     if (args.city !== undefined) patch.city = args.city;
+    if (args.countryCode !== undefined) patch.countryCode = args.countryCode;
+    if (args.countryName !== undefined) patch.countryName = args.countryName;
+    if (args.cityId !== undefined) patch.cityId = args.cityId;
+    if (args.relationshipIntentions !== undefined)
+      patch.relationshipIntentions = args.relationshipIntentions;
+    if (args.education !== undefined) patch.education = args.education;
     if (args.prompts !== undefined) patch.prompts = args.prompts;
 
     await ctx.db.patch(me._id, patch);
@@ -206,18 +234,51 @@ export const updateDiscoveryPrefs = mutation({
         v.literal("other"),
       ),
     ),
+    interests: v.optional(v.array(v.string())),
+    languages: v.optional(v.array(v.string())),
+    lifestyle: v.optional(v.array(v.string())),
+    intentions: v.optional(v.array(v.string())),
+    verifiedOnly: v.optional(v.boolean()),
+    recentlyActiveDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const me = await getMyProfile(ctx);
     if (!me) throw new Error("Not found");
     if (args.ageMin < 18 || args.ageMax > 100 || args.ageMin > args.ageMax)
       throw new Error("Invalid age range");
+
+    // Advanced filters are paid entitlements — enforce on the backend.
+    const advanced = {
+      interests: args.interests,
+      languages: args.languages,
+      lifestyle: args.lifestyle,
+      intentions: args.intentions,
+      verifiedOnly: args.verifiedOnly,
+      recentlyActiveDays: args.recentlyActiveDays,
+    };
+    const hasAdvanced = Object.values(advanced).some(
+      (val) => val !== undefined && (Array.isArray(val) ? val.length > 0 : val),
+    );
+    if (hasAdvanced) {
+      const ent = await entitlementsForUser(ctx, me.userId);
+      if (!ent?.entitlements.advancedFilters) {
+        throw new Error("Advanced filters require a paid membership");
+      }
+    }
+
     await ctx.db.patch(me._id, {
       discoveryPrefs: {
         ageMin: args.ageMin,
         ageMax: args.ageMax,
         distanceKm: args.distanceKm,
         genders: args.genders,
+        interests: args.interests ?? me.discoveryPrefs.interests,
+        languages: args.languages ?? me.discoveryPrefs.languages,
+        lifestyle: args.lifestyle ?? me.discoveryPrefs.lifestyle,
+        intentions: args.intentions ?? me.discoveryPrefs.intentions,
+        verifiedOnly: args.verifiedOnly ?? me.discoveryPrefs.verifiedOnly,
+        recentlyActiveDays:
+          args.recentlyActiveDays ?? me.discoveryPrefs.recentlyActiveDays,
       },
     });
     return true;
@@ -259,6 +320,9 @@ export const setShowInDiscovery = mutation({
 export const setLocation = mutation({
   args: {
     city: v.optional(v.string()),
+    countryCode: v.optional(v.string()),
+    countryName: v.optional(v.string()),
+    cityId: v.optional(v.string()),
     approxLat: v.optional(v.number()),
     approxLng: v.optional(v.number()),
   },
@@ -267,9 +331,54 @@ export const setLocation = mutation({
     if (!me) throw new Error("Not found");
     const patch: Record<string, unknown> = { lastActiveAt: nowMs() };
     if (args.city !== undefined) patch.city = args.city;
+    if (args.countryCode !== undefined) patch.countryCode = args.countryCode;
+    if (args.countryName !== undefined) patch.countryName = args.countryName;
+    if (args.cityId !== undefined) patch.cityId = args.cityId;
     if (args.approxLat !== undefined) patch.approxLat = args.approxLat;
     if (args.approxLng !== undefined) patch.approxLng = args.approxLng;
     await ctx.db.patch(me._id, patch);
+    return true;
+  },
+});
+
+/** Travel (passport) mode: discover people in a future location. */
+export const setTravelMode = mutation({
+  args: {
+    enabled: v.boolean(),
+    countryCode: v.optional(v.string()),
+    cityName: v.optional(v.string()),
+    lat: v.optional(v.number()),
+    lng: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const me = await getMyProfile(ctx);
+    if (!me) throw new Error("Not found");
+    if (args.enabled) {
+      const ent = await entitlementsForUser(ctx, me.userId);
+      if (!ent?.entitlements.travelMode) {
+        throw new Error("Travel mode requires VYBE Platinum");
+      }
+    }
+    await ctx.db.patch(me._id, {
+      travel: {
+        enabled: args.enabled,
+        countryCode: args.countryCode ?? me.travel?.countryCode ?? "",
+        cityName: args.cityName ?? me.travel?.cityName ?? "",
+        lat: args.lat ?? me.travel?.lat,
+        lng: args.lng ?? me.travel?.lng,
+        expiresAt: args.expiresAt ?? me.travel?.expiresAt,
+      },
+      lastActiveAt: nowMs(),
+    });
+    if (args.enabled) {
+      await ctx.db.insert("analytics", {
+        profileId: me._id,
+        event: "travel_mode_enabled",
+        metadata: { countryCode: args.countryCode ?? "" },
+        createdAt: nowMs(),
+      });
+    }
     return true;
   },
 });

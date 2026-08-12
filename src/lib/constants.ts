@@ -91,6 +91,12 @@ export const REPORT_CATEGORIES = [
 ] as const;
 
 export const PROMPT_QUESTIONS = [
+  "My perfect weekend is…",
+  "You can win me over by…",
+  "The fastest way to make me laugh is…",
+  "My current obsession is…",
+  "Let's debate…",
+  "My ideal spontaneous plan is…",
   "My simple pleasure",
   "A life goal of mine",
   "I'm weirdly attracted to",
@@ -112,6 +118,63 @@ export const CHAT_EMOJI = [
   "☕", "🍕", "🍜", "🍣", "🍦", "🌮", "🍷", "🍺",
   "😴", "🤗", "🤯", "🥳", "😇", "😈", "💯", "🚀", "🌈", "⚡",
 ] as const;
+
+/** Standardized country list (ISO 3166-1 alpha-2 codes). */
+export const COUNTRIES: { code: string; name: string }[] = [
+  { code: "TR", name: "Türkiye" },
+  { code: "DE", name: "Germany" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "FR", name: "France" },
+  { code: "US", name: "United States" },
+  { code: "AE", name: "United Arab Emirates" },
+  { code: "JP", name: "Japan" },
+  { code: "KR", name: "South Korea" },
+  { code: "ES", name: "Spain" },
+  { code: "NL", name: "Netherlands" },
+  { code: "BR", name: "Brazil" },
+  { code: "AU", name: "Australia" },
+  { code: "ZA", name: "South Africa" },
+  { code: "PT", name: "Portugal" },
+  { code: "MX", name: "Mexico" },
+  { code: "IT", name: "Italy" },
+  { code: "CA", name: "Canada" },
+  { code: "IN", name: "India" },
+  { code: "ID", name: "Indonesia" },
+  { code: "PL", name: "Poland" },
+  { code: "UA", name: "Ukraine" },
+  { code: "RU", name: "Russia" },
+  { code: "EG", name: "Egypt" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "AR", name: "Argentina" },
+  { code: "GR", name: "Greece" },
+];
+
+/** Relationship intentions (configurable discovery filter). */
+export const INTENTIONS = [
+  "Something casual",
+  "New friends",
+  "Long-term partner",
+  "Relationship, open to exploring",
+  "Figuring it out",
+] as const;
+
+/** Education levels (optional profile field). */
+export const EDUCATION = [
+  "High school",
+  "Associate degree",
+  "Bachelor's degree",
+  "Master's degree",
+  "Doctorate",
+  "Trade school",
+  "Prefer not to say",
+] as const;
+
+/** Distance presets in km (5/10/25/50/100/250/anywhere). */
+export const DISTANCE_OPTIONS = [5, 10, 25, 50, 100, 250, 4000] as const;
+export const ANYWHERE_KM = 4000;
+
+/** Moods for VYBE Moments. */
+export const MOODS = ["✨", "🔥", "🌙", "☀️", "🎶", "🏔️", "🌊", "🎉", "☕", "💜"] as const;
 
 export const CITIES: { name: string; country: string; lat: number; lng: number }[] = [
   { name: "Istanbul", country: "Türkiye", lat: 41.0082, lng: 28.9784 },

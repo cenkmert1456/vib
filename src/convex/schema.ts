@@ -50,12 +50,38 @@ export const ACTIVITY_TYPES = [
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 export const VERIFICATION_STATUSES = [
+  "not_started",
+  "pending",
+  "processing",
+  "verified",
+  "failed",
+  "manual_review",
+] as const;
+export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
+
+/** Status of the badge on a profile (distinct from session status). */
+export const PROFILE_VERIFICATION_STATUSES = [
   "none",
   "pending",
   "verified",
   "rejected",
 ] as const;
-export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
+export type ProfileVerificationStatus = (typeof PROFILE_VERIFICATION_STATUSES)[number];
+
+export const PLANS = ["free", "silver", "gold", "platinum"] as const;
+export type Plan = (typeof PLANS)[number];
+
+export const SUBSCRIPTION_STATUSES = [
+  "active",
+  "expired",
+  "canceled",
+  "grace_period",
+  "pending",
+] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+export const MOMENT_VISIBILITY = ["matches", "public"] as const;
+export type MomentVisibility = (typeof MOMENT_VISIBILITY)[number];
 
 const schema = defineSchema(
   {
@@ -96,15 +122,32 @@ const schema = defineSchema(
       interests: v.array(v.string()),
       languages: v.array(v.string()),
       city: v.optional(v.string()),
+      // Global discovery: standardized country + city identifiers.
+      countryCode: v.optional(v.string()), // ISO 3166-1 alpha-2
+      countryName: v.optional(v.string()),
+      cityId: v.optional(v.string()),
       approxLat: v.optional(v.number()),
       approxLng: v.optional(v.number()),
       lifestyle: v.array(v.string()),
+      relationshipIntentions: v.array(v.string()),
+      education: v.optional(v.string()),
+      // Travel / passport mode: discover people in a future location.
+      travel: v.optional(
+        v.object({
+          enabled: v.boolean(),
+          countryCode: v.string(),
+          cityName: v.string(),
+          lat: v.optional(v.number()),
+          lng: v.optional(v.number()),
+          expiresAt: v.optional(v.number()),
+        }),
+      ),
       prompts: v.array(
         v.object({ question: v.string(), answer: v.string() }),
       ),
       verified: v.boolean(),
       verificationStatus: v.union(
-        ...VERIFICATION_STATUSES.map((s) => v.literal(s)),
+        ...PROFILE_VERIFICATION_STATUSES.map((s) => v.literal(s)),
       ),
       verificationPhoto: v.optional(v.string()), // storage url of selfie
       showInDiscovery: v.boolean(),
@@ -118,6 +161,13 @@ const schema = defineSchema(
         ageMax: v.number(),
         distanceKm: v.number(),
         genders: v.array(v.union(...GENDERS.map((g) => v.literal(g)))),
+        // Advanced filters (premium): optional refinement of the deck.
+        interests: v.optional(v.array(v.string())),
+        languages: v.optional(v.array(v.string())),
+        lifestyle: v.optional(v.array(v.string())),
+        intentions: v.optional(v.array(v.string())),
+        verifiedOnly: v.optional(v.boolean()),
+        recentlyActiveDays: v.optional(v.number()),
       }),
       notificationPrefs: v.object({
         matches: v.boolean(),
@@ -127,7 +177,9 @@ const schema = defineSchema(
       }),
     })
       .index("by_user", ["userId"])
-      .index("by_isDemo", ["isDemo"]),
+      .index("by_isDemo", ["isDemo"])
+      .index("by_country", ["countryCode"])
+      .index("by_city", ["cityId"]),
 
     /** A swipe decision from one profile toward another. */
     swipes: defineTable({
@@ -209,6 +261,129 @@ const schema = defineSchema(
       message: v.string(),
       createdAt: v.number(),
     }).index("by_profile", ["profileId"]),
+
+    // =========================================================================
+    // Monetization & production features
+    // =========================================================================
+
+    /**
+     * Subscriptions. The backend is the source of truth for entitlements;
+     * rows are created/updated by verified provider webhooks (Stripe) or
+     * platform purchase verification, never by the client directly.
+     */
+    subscriptions: defineTable({
+      userId: v.id("users"),
+      platform: v.string(), // "stripe" | "ios" | "android" | "manual"
+      productId: v.optional(v.string()),
+      plan: v.union(...PLANS.map((p) => v.literal(p))),
+      status: v.union(...SUBSCRIPTION_STATUSES.map((s) => v.literal(s))),
+      startedAt: v.optional(v.number()),
+      expiresAt: v.optional(v.number()),
+      autoRenew: v.boolean(),
+      entitlementVersion: v.number(),
+      providerSubscriptionId: v.optional(v.string()),
+      providerCustomerId: v.optional(v.string()),
+      lastEventAt: v.optional(v.number()),
+    }).index("by_user", ["userId"]),
+
+    /** Profile verification sessions (live liveness). */
+    verifications: defineTable({
+      userId: v.id("users"),
+      profileId: v.optional(v.id("profiles")),
+      provider: v.string(), // e.g. "passage" | "incode" | "unconfigured"
+      providerSessionId: v.optional(v.string()),
+      status: v.union(...VERIFICATION_STATUSES.map((s) => v.literal(s))),
+      challengeSequence: v.array(v.string()),
+      challengeResults: v.optional(v.array(v.string())),
+      failureReason: v.optional(v.string()),
+      createdAt: v.number(),
+      completedAt: v.optional(v.number()),
+      retryCount: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_latest", ["userId", "createdAt"]),
+
+    /** Profile promotion: VYBE Boost. */
+    boosts: defineTable({
+      profileId: v.id("profiles"),
+      startedAt: v.number(),
+      expiresAt: v.number(),
+      status: v.union(v.literal("active"), v.literal("completed")),
+      baseViews: v.number(),
+      endedAt: v.optional(v.number()),
+      result: v.optional(
+        v.object({
+          views: v.number(),
+          likes: v.number(),
+          matches: v.number(),
+        }),
+      ),
+    }).index("by_profile", ["profileId", "startedAt"]),
+
+    /** Temporary VYBE Moments (expire after a configurable period). */
+    moments: defineTable({
+      profileId: v.id("profiles"),
+      image: v.string(),
+      caption: v.optional(v.string()),
+      mood: v.optional(v.string()),
+      visibility: v.union(...MOMENT_VISIBILITY.map((m) => v.literal(m))),
+      expiresAt: v.number(),
+      createdAt: v.number(),
+      deleted: v.boolean(),
+    })
+      .index("by_profile", ["profileId", "createdAt"])
+      .index("by_expiry", ["expiresAt"]),
+
+    /** Rotating Question of the Day content (backend-managed). */
+    dailyQuestions: defineTable({
+      question: v.string(),
+      activeDate: v.string(), // "2026-08-12"
+      lang: v.string(), // "en" — English source; client renders its own copy
+    }).index("by_date", ["activeDate"]),
+
+    /** A user's answer to a daily question. */
+    dailyAnswers: defineTable({
+      profileId: v.id("profiles"),
+      date: v.string(),
+      question: v.string(),
+      answer: v.string(),
+      shareOnProfile: v.boolean(),
+      createdAt: v.number(),
+    })
+      .index("by_profile_date", ["profileId", "date"])
+      .index("by_profile", ["profileId"]),
+
+    /** Privacy-conscious product analytics events. */
+    analytics: defineTable({
+      profileId: v.id("profiles"),
+      event: v.string(),
+      metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+      createdAt: v.number(),
+    })
+      .index("by_profile", ["profileId", "createdAt"])
+      .index("by_event", ["event", "createdAt"]),
+
+    /** Profile view events (used for Boost results + insights). */
+    profileViews: defineTable({
+      viewerProfileId: v.id("profiles"),
+      viewedProfileId: v.id("profiles"),
+      createdAt: v.number(),
+    })
+      .index("by_viewed", ["viewedProfileId", "createdAt"])
+      .index("by_viewer", ["viewerProfileId", "createdAt"]),
+
+    /**
+     * Server-side usage counters for daily / monthly entitlements
+     * (e.g. "rewind:2026-08-12", "superVybe:2026-08-12", "boost:2026-08").
+     * The backend enforces limits here so clients cannot bypass them.
+     */
+    usageCounters: defineTable({
+      profileId: v.id("profiles"),
+      key: v.string(),
+      count: v.number(),
+    })
+      .index("by_profile_key", ["profileId", "key"])
+      .index("by_key", ["key"]),
   },
   {
     schemaValidation: false,
